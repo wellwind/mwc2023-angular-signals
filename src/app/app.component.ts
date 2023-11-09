@@ -1,19 +1,17 @@
 import {
   Component,
   OnDestroy,
-  OnInit,
   computed,
   effect,
   inject,
-  signal,
+  signal
 } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTableModule } from '@angular/material/table';
-import { TodoResponse } from './todo-response';
-import { TodoService } from './todo.service';
-import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { switchMap } from 'rxjs';
+import { TodoService } from './todo.service';
 
 @Component({
   selector: 'app-root',
@@ -99,7 +97,7 @@ import { switchMap } from 'rxjs';
   }
   `,
 })
-export class AppComponent implements OnInit, OnDestroy {
+export class AppComponent implements OnDestroy {
   private todoService = inject(TodoService);
 
   protected pageNumber = signal(1);
@@ -126,15 +124,6 @@ export class AppComponent implements OnInit, OnDestroy {
     console.log(this.todoResponse());
   });
 
-  ngOnInit(): void {
-    // this.updateScreen();
-    // this.pageNumber$
-    //   .pipe(switchMap((pageNumber) => this.todoService.getTodo(pageNumber)))
-    //   .subscribe((response) => {
-    //     this.todoResponse.set(response);
-    //   });
-  }
-
   ngOnDestroy(): void {
     this.logTodoResponse.destroy();
   }
@@ -142,25 +131,16 @@ export class AppComponent implements OnInit, OnDestroy {
   prevPage() {
     if (this.canGoPrevPage()) {
       this.pageNumber.update((page) => page - 1);
-      // this.updateScreen();
     }
   }
 
   nextPage() {
     if (this.canGoNextPage()) {
       this.pageNumber.update((page) => page + 1);
-      // this.updateScreen();
     }
   }
 
   goPage(pageNumber: number): void {
     this.pageNumber.set(pageNumber);
-    // this.updateScreen();
   }
-
-  // updateScreen() {
-  //   this.todoService.getTodo(this.pageNumber()).subscribe((response) => {
-  //     this.todoResponse.set(response);
-  //   });
-  // }
 }
