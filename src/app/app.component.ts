@@ -1,8 +1,16 @@
-import { Component, OnInit, inject } from '@angular/core';
+import {
+  Component,
+  OnDestroy,
+  OnInit,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
-import { MatTableModule } from '@angular/material/table';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { TodoItem } from './todo-response';
+import { MatTableModule } from '@angular/material/table';
+import { TodoResponse } from './todo-response';
 import { TodoService } from './todo.service';
 
 @Component({
@@ -11,7 +19,7 @@ import { TodoService } from './todo.service';
   imports: [MatTableModule, MatButtonModule, MatCheckboxModule],
   template: `
     <!-- todo list -->
-    <table mat-table [dataSource]="todoItems">
+    <table mat-table [dataSource]="todoItems()">
       <ng-container matColumnDef="id">
         <th mat-header-cell *matHeaderCellDef>ID</th>
         <td mat-cell *matCellDef="let element">{{ element.id }}</td>
@@ -38,25 +46,33 @@ import { TodoService } from './todo.service';
       <button
         mat-raised-button
         (click)="goPage(1)"
-        [disabled]="pageNumber === 1"
+        [disabled]="pageNumber() === 1"
       >
         First Page
       </button>
 
-      <button mat-raised-button (click)="prevPage()" [disabled]="!canGoPrevPage">
+      <button
+        mat-raised-button
+        (click)="prevPage()"
+        [disabled]="!canGoPrevPage()"
+      >
         Prev Page
       </button>
 
-      <div class="current-page">{{ pageNumber }} / {{ pageSize }}</div>
+      <div class="current-page">{{ pageNumber() }} / {{ pageSize() }}</div>
 
-      <button mat-raised-button (click)="nextPage()" [disabled]="!canGoNextPage">
+      <button
+        mat-raised-button
+        (click)="nextPage()"
+        [disabled]="!canGoNextPage()"
+      >
         Next Page
       </button>
 
       <button
         mat-raised-button
-        (click)="goPage(pageSize)"
-        [disabled]="pageNumber === pageSize"
+        (click)="goPage(pageSize())"
+        [disabled]="pageNumber() === pageSize()"
       >
         Last Page
       </button>
@@ -81,48 +97,59 @@ import { TodoService } from './todo.service';
   }
   `,
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   private todoService = inject(TodoService);
 
-  protected canGoNextPage = false;
-  protected canGoPrevPage = false;
+  protected pageNumber = signal(1);
 
-  protected pageNumber = 1;
-  protected pageSize = 10;
-  protected todoItems: Array<TodoItem> = [];
-  protected total: number = 0;
+  private todoResponse = signal<TodoResponse>({
+    data: [],
+    total: 0,
+    pageNumber: 0,
+    pageSize: 0,
+  });
+  protected todoItems = computed(() => this.todoResponse().data);
+  protected total = computed(() => this.todoResponse().total);
+  protected pageSize = computed(() => this.todoResponse().pageSize);
+  protected canGoPrevPage = computed(() => this.pageNumber() > 1);
+  protected canGoNextPage = computed(
+    () => this.pageNumber() * this.pageSize() < this.total()
+  );
+
+  private logTodoResponse = effect(() => {
+    console.log(this.todoResponse());
+  });
 
   ngOnInit(): void {
     this.updateScreen();
   }
 
+  ngOnDestroy(): void {
+    this.logTodoResponse.destroy();
+  }
+
   prevPage() {
-    if (this.canGoPrevPage) {
-      this.pageNumber--;
+    if (this.canGoPrevPage()) {
+      this.pageNumber.update((page) => page - 1);
       this.updateScreen();
     }
   }
 
   nextPage() {
-    if (this.canGoNextPage) {
-      this.pageNumber++;
+    if (this.canGoNextPage()) {
+      this.pageNumber.update((page) => page + 1);
       this.updateScreen();
     }
   }
 
   goPage(pageNumber: number): void {
-    this.pageNumber = pageNumber;
+    this.pageNumber.set(pageNumber);
     this.updateScreen();
   }
 
   updateScreen() {
-    this.todoService.getTodo(this.pageNumber).subscribe((response) => {
-      this.todoItems = response.data;
-      this.total = response.total;
-      this.pageSize = response.pageSize;
-
-      this.canGoPrevPage = this.pageNumber > 1;
-      this.canGoNextPage = this.pageNumber * this.pageSize < this.total;
+    this.todoService.getTodo(this.pageNumber()).subscribe((response) => {
+      this.todoResponse.set(response);
     });
   }
 }
