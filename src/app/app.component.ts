@@ -12,7 +12,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTableModule } from '@angular/material/table';
 import { TodoResponse } from './todo-response';
 import { TodoService } from './todo.service';
-import { toObservable } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { switchMap } from 'rxjs';
 
 @Component({
@@ -106,12 +106,14 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private pageNumber$ = toObservable(this.pageNumber);
 
-  private todoResponse = signal<TodoResponse>({
-    data: [],
-    total: 0,
-    pageNumber: 0,
-    pageSize: 0,
+  private todoResponse$ = this.pageNumber$.pipe(
+    switchMap((pageNumber) => this.todoService.getTodo(pageNumber))
+  );
+
+  private todoResponse = toSignal(this.todoResponse$, {
+    initialValue: { data: [], total: 0, pageNumber: 0, pageSize: 0 },
   });
+
   protected todoItems = computed(() => this.todoResponse().data);
   protected total = computed(() => this.todoResponse().total);
   protected pageSize = computed(() => this.todoResponse().pageSize);
@@ -126,11 +128,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     // this.updateScreen();
-    this.pageNumber$
-      .pipe(switchMap((pageNumber) => this.todoService.getTodo(pageNumber)))
-      .subscribe((response) => {
-        this.todoResponse.set(response);
-      });
+    // this.pageNumber$
+    //   .pipe(switchMap((pageNumber) => this.todoService.getTodo(pageNumber)))
+    //   .subscribe((response) => {
+    //     this.todoResponse.set(response);
+    //   });
   }
 
   ngOnDestroy(): void {
