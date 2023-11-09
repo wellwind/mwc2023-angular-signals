@@ -12,6 +12,8 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTableModule } from '@angular/material/table';
 import { TodoResponse } from './todo-response';
 import { TodoService } from './todo.service';
+import { toObservable } from '@angular/core/rxjs-interop';
+import { switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -102,6 +104,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
   protected pageNumber = signal(1);
 
+  private pageNumber$ = toObservable(this.pageNumber);
+
   private todoResponse = signal<TodoResponse>({
     data: [],
     total: 0,
@@ -121,7 +125,12 @@ export class AppComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.updateScreen();
+    // this.updateScreen();
+    this.pageNumber$
+      .pipe(switchMap((pageNumber) => this.todoService.getTodo(pageNumber)))
+      .subscribe((response) => {
+        this.todoResponse.set(response);
+      });
   }
 
   ngOnDestroy(): void {
@@ -131,25 +140,25 @@ export class AppComponent implements OnInit, OnDestroy {
   prevPage() {
     if (this.canGoPrevPage()) {
       this.pageNumber.update((page) => page - 1);
-      this.updateScreen();
+      // this.updateScreen();
     }
   }
 
   nextPage() {
     if (this.canGoNextPage()) {
       this.pageNumber.update((page) => page + 1);
-      this.updateScreen();
+      // this.updateScreen();
     }
   }
 
   goPage(pageNumber: number): void {
     this.pageNumber.set(pageNumber);
-    this.updateScreen();
+    // this.updateScreen();
   }
 
-  updateScreen() {
-    this.todoService.getTodo(this.pageNumber()).subscribe((response) => {
-      this.todoResponse.set(response);
-    });
-  }
+  // updateScreen() {
+  //   this.todoService.getTodo(this.pageNumber()).subscribe((response) => {
+  //     this.todoResponse.set(response);
+  //   });
+  // }
 }
